@@ -1,12 +1,28 @@
 var DATA_URL = 'data.csv';
-var BIB_NUMBER = 233;
+//var DATA_URL = 'http://georesults.racemine.com/USA-Productions/events/2016/Half-Moon-Bay-Triathlons/results';
+var BIB_NUMBER = 887;
 var ZERO_DURATION = '0:00:00';
+
+// http://stackoverflow.com/questions/901115/how-can-i-get-query-string-values-in-javascript
+var queryString = (function(a) {
+    if (a == "") return {};
+    var b = {};
+    for (var i = 0; i < a.length; ++i)
+    {
+        var p=a[i].split('=', 2);
+        if (p.length == 1)
+            b[p[0]] = "";
+        else
+            b[p[0]] = decodeURIComponent(p[1].replace(/\+/g, " "));
+    }
+    return b;
+})(window.location.search.substr(1).split('&'));
 
 // Zhu Li!
 function doTheThing() {
     var settings = {
         url: DATA_URL,
-        bib: BIB_NUMBER,
+        bib: queryString['bib'] || BIB_NUMBER,
         filters: {
             nonStarters: true,
             nonFinishers: true
@@ -181,13 +197,15 @@ function computeStats(settings, position, filteredData) {
     }
 
     var threshKeys = [ 'Swim', 'T1', 'T1_elapsed', 'Bike', 'Bike_elapsed', 'T2', 'T2_elapsed', 'Run', 'Elapsed' ];
+    var leadersKeys = [ 'Swim', 'T1_elapsed', 'Bike_elapsed', 'T2_elapsed', 'Elapsed' ];
     
     var thresh = { };
     $.each(threshKeys, function (idx, val) {
         thresh[val] = duration.convertToSeconds(bibStats[position[val]]);
         interestingBits[val] = {
             pos: 1,
-            total: 0
+            total: 0,
+            leaders: new Set([])
         };
     });
 
@@ -198,10 +216,40 @@ function computeStats(settings, position, filteredData) {
 
                 if (duration.convertToSeconds(racerVals[position[stage]]) < thresh[stage]) {
                     interestingBits[stage].pos += 1;
+
+                    // If this is one that we care about passed N/passed by M, put the bib in the array
+                    if (leadersKeys.indexOf(stage) !== -1) {
+                        interestingBits[stage].leaders.add(racerVals[position['Bib']]);
+                    }
                 }
             }
         });
     });
+
+    $.each(leadersKeys, function (leaderIdx, stage) {
+        if (leaderIdx === 0) {
+            // At the beginning, you get passed by everyone ahead of you and nobody behind you
+            interestingBits[stage].passedBy = interestingBits[stage].leaders.size;
+            interestingBits[stage].passed = interestingBits[stage].total - interestingBits[stage].pos;
+        } else {
+            var leadersBefore = new Set(interestingBits[leadersKeys[leaderIdx-1]].leaders);
+            var leadersNow = new Set(interestingBits[stage].leaders);
+
+            // Anyone in "leadersNow" but not in "leadersBefore" is someone who passed us.
+            // Likewise, anyone in "leadersBefore" but not in "leadersNow" is someone we passed.
+            
+            leadersBefore.forEach(function (val) {
+                if (leadersNow.has(val)) {
+                    leadersBefore.delete(val);
+                    leadersNow.delete(val);
+                }
+            });
+
+            interestingBits[stage].passedBy = leadersNow.size;
+            interestingBits[stage].passed = leadersBefore.size;
+        }
+    });
+
     D.resolve(interestingBits);
 
 
@@ -235,26 +283,30 @@ function displayResults(resultData) {
 
     console.log(resultData);
 
+    function fillInPassers($elt, data) {
+        $elt.html(data.pos + '<div class="passers">(Passed ' + data.passed + ', passed by ' + data.passedBy + ')</div>');
+    }
+
     $('#BibNum').text(resultData.bib);
 
     $('#Swim_Nth').text(resultData['Swim'].pos);
-    $('#Swim_Pos').text(resultData['Swim'].pos);
+    fillInPassers($('#Swim_Pos'), resultData['Swim']);
     $('#Swim_Total').text(resultData['Swim'].total);
 
     $('#T1_Nth').text(resultData['T1'].pos);
-    $('#T1_Pos').text(resultData['T1_elapsed'].pos);
+    fillInPassers($('#T1_Pos'), resultData['T1_elapsed']);
     $('#T1_Total').text(resultData['T1'].total);
 
     $('#Bike_Nth').text(resultData['Bike'].pos);
-    $('#Bike_Pos').text(resultData['Bike_elapsed'].pos);
+    fillInPassers($('#Bike_Pos'), resultData['Bike_elapsed']);
     $('#Bike_Total').text(resultData['Bike'].total);
 
     $('#T2_Nth').text(resultData['T2'].pos);
-    $('#T2_Pos').text(resultData['T2_elapsed'].pos);
+    fillInPassers($('#T2_Pos'), resultData['T2_elapsed']);
     $('#T2_Total').text(resultData['T2'].total);
 
     $('#Run_Nth').text(resultData['Run'].pos);
-    $('#Run_Pos').text(resultData['Elapsed'].pos);
+    fillInPassers($('#Run_Pos'), resultData['Elapsed']);
     $('#Run_Total').text(resultData['Run'].total);
 
     return D.promise();
