@@ -1,5 +1,6 @@
 var DATA_URL = 'data.csv';
 //var DATA_URL = 'http://georesults.racemine.com/USA-Productions/events/2016/Half-Moon-Bay-Triathlons/results';
+var DIVISIONS_URL = 'http://localhost:7223/readDivisions';
 var BIB_NUMBER = 887;
 var ZERO_DURATION = '0:00:00';
 
@@ -17,6 +18,42 @@ var queryString = (function(a) {
     }
     return b;
 })(window.location.search.substr(1).split('&'));
+
+var divisions = {};
+
+function loadAgeGroups(division) {
+    var ageGroups = divisions[division];
+    $('#ageGroupDrop').empty();
+    if (ageGroups) {
+        $.each(ageGroups, function (idx, val) {
+            $('<li id="ag' + idx + '">' + val.StartAge + '-' + val.EndAge + '</li>').appendTo('#ageGroupDrop');
+        });
+        $('#ageGroupDropLabel').removeClass('disabled');
+    } else {
+        $('#ageGroupDropLabel').addClass('disabled');
+    }
+}
+
+function loadDivisions() {
+    $.ajax(DIVISIONS_URL)
+        .then(function (data, status, jqXHR) {
+            var divisionsRaw = JSON.parse(data);
+
+            $.each(divisionsRaw, function (idx, val) {
+                divisions[val.Name] = val.AgeGroups;
+            });
+
+            $.each(Object.keys(divisions), function (idx, val) {
+                $('<li id="div' + idx + '" onclick="loadAgeGroups(\'' + val + '\')">' + val + '</li>').appendTo('#divisionDrop');
+            });
+            $('#divisionDropLabel').removeClass('disabled');
+
+        })
+        .fail(function (data, status, err) {
+            // TODO Something better than this, I mean geez.  C'mon.
+            alert('Couldn\'t read the divisions');
+        });
+}
 
 // Zhu Li!
 function doTheThing() {

@@ -3,7 +3,10 @@
 <title>Prospector</title>
 <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
 <script src="https://code.jquery.com/jquery-2.2.3.min.js"></script>
-<script src="./prospector.js"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"></script>
+<!-- <link rel="stylesheet" href="lib/bootstrap.min.css">
+<script src="lib/jquery-2.1.0.min.js"></script>
+ --><script src="./prospector.js"></script>
 <style>
 .passers {
     text-align: right;
@@ -18,54 +21,103 @@
         <div class="row">
             <h1 class="bd-title">Prospector - Digging interesting stats out of Racemine results</h1>
 
-            <button class="btn btn-primary" onclick="doTheThing()">Go</button>
 
-            <div class="col-md-9 bd-content" id="results">
-                <div class="table-responsive">
-                    <table class="table table-bordered table-striped">
-                        <thead>
-                            <tr>
-                                <th>Bib #<span id="BibNum"></span></th>
-                                <th class="text-xs-center">Nth fastest leg</th>
-                                <th class="text-xs-center">Exited in position</th>
-                                <th class="text-xs-center">...out of</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <th class="text-nowrap" scope="row">Swim</th>
-                                <td id="Swim_Nth"></td>
-                                <td id="Swim_Pos"></td>
-                                <td id="Swim_Total"></td>
-                            </tr>
-                            <tr>
-                                <th class="text-nowrap" scope="row">T1</th>
-                                <td id="T1_Nth"></td>
-                                <td id="T1_Pos"></td>
-                                <td id="T1_Total"></td>
-                            </tr>
-                            <tr>
-                                <th class="text-nowrap" scope="row">Bike</th>
-                                <td id="Bike_Nth"></td>
-                                <td id="Bike_Pos"></td>
-                                <td id="Bike_Total"></td>
-                            </tr>
-                            <tr>
-                                <th class="text-nowrap" scope="row">T2</th>
-                                <td id="T2_Nth"></td>
-                                <td id="T2_Pos"></td>
-                                <td id="T2_Total"></td>
-                            </tr>
-                            <tr>
-                                <th class="text-nowrap" scope="row">Run</th>
-                                <td id="Run_Nth"></td>
-                                <td id="Run_Pos"></td>
-                                <td id="Run_Total"></td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+
+
+            <ul id="tabList" class="nav nav-tabs" role="tablist">
+                <li role="presentation" class="active"><a href="#setup" aria-controls="setup" role="tab" data-toggle="tab">Setup</a></li>
+                <li role="presentation"><a href="#results" aria-controls="results" role="tab" data-toggle="tab">Results</a></li>
+            </ul>
+
+            <div class="tab-content">
+
+                <div role="tabpanel" class="tab-pane active" id="setup">
+                    <button class="btn col-sm-2" onclick="loadDivisions()">Load Divisions</button>
+
+                    <div class="dropdown">
+                        <button id="divisionDropLabel" class="btn disabled col-sm-2 col-sm-offset-1" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                            Division
+                            <span class="caret"></span>
+                        </button>
+                        <ul id="divisionDrop" class="dropdown-menu" aria-labelledby="divisionDropLabel">
+                        
+                        </ul>
+                    </div>
+
+                    <div class="dropdown">
+                        <button id="genderDropLabel" class="btn col-sm-2 col-sm-offset-1" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                            Gender
+                            <span class="caret"></span>
+                        </button>
+                        <ul id="genderDrop" class="dropdown-menu" aria-labelledby="genderDropLabel">
+                            <li id="genderMF">Male &amp; Female</li>
+                            <li id="genderM">Male</li>
+                            <li id="genderF">Female</li>
+                        </ul>
+                    </div>
+
+                    <div class="dropdown">
+                        <button id="ageGroupDropLabel" class="btn disabled col-sm-2 col-sm-offset-1" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                            Age Group
+                            <span class="caret"></span>
+                        </button>
+                        <ul id="ageGroupDrop" class="dropdown-menu" aria-labelledby="ageGroupDropLabel">
+                        
+                        </ul>
+                    </div>
+                </div> <!-- setup pane -->
+
+                <div role="tabpanel" class="tab-pane" id="results">
+                    <button class="btn btn-primary" onclick="doTheThing()">Go</button>
+
+                    <div class="col-md-9 bd-content" id="results">
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Bib #<span id="BibNum"></span></th>
+                                        <th class="text-xs-center">Nth fastest leg</th>
+                                        <th class="text-xs-center">Exited in position</th>
+                                        <th class="text-xs-center">...out of</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <th class="text-nowrap" scope="row">Swim</th>
+                                        <td id="Swim_Nth"></td>
+                                        <td id="Swim_Pos"></td>
+                                        <td id="Swim_Total"></td>
+                                    </tr>
+                                    <tr>
+                                        <th class="text-nowrap" scope="row">T1</th>
+                                        <td id="T1_Nth"></td>
+                                        <td id="T1_Pos"></td>
+                                        <td id="T1_Total"></td>
+                                    </tr>
+                                    <tr>
+                                        <th class="text-nowrap" scope="row">Bike</th>
+                                        <td id="Bike_Nth"></td>
+                                        <td id="Bike_Pos"></td>
+                                        <td id="Bike_Total"></td>
+                                    </tr>
+                                    <tr>
+                                        <th class="text-nowrap" scope="row">T2</th>
+                                        <td id="T2_Nth"></td>
+                                        <td id="T2_Pos"></td>
+                                        <td id="T2_Total"></td>
+                                    </tr>
+                                    <tr>
+                                        <th class="text-nowrap" scope="row">Run</th>
+                                        <td id="Run_Nth"></td>
+                                        <td id="Run_Pos"></td>
+                                        <td id="Run_Total"></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div> <!-- table-responsive -->
+                    </div> <!-- results table -->
+                </div> <!-- results pane -->
+            </div> <!-- tab-content -->
         </div>
     </div>
 </div>
