@@ -96,7 +96,7 @@ function doTheThing(options) {
     if (!options) {
         options = {};
     }
-    
+
     var settings = {
         url: options.url || DATA_URL,
         bib: options.bib || queryString['bib'] || BIB_NUMBER,
@@ -106,7 +106,7 @@ function doTheThing(options) {
         }
     };
 
-    var parseData = parseDataCsv;
+    var parseData = parseDataRacemine;
 
     loadData(settings)
         .then(parseData)
@@ -177,29 +177,9 @@ function loadData(settings) {
 //  switch parseDataCsv and the downstream handlers to build a JSON array like the node-side results,
 //  since that's how we'll want to build everything anyway
 function parseDataRacemine(settings, data, status, jqXHR) {
-    function buildPositions(rawHeader) {
-        var posData = rawHeader.split(/,/);
-        var rv = {};
-        $.each(posData, function (idx, val) {
-            rv[val] = idx;
-        });
-
-        return rv;
-    }
-
     var D = $.Deferred();
     if (status === 'success') {
-        var position = {};
-        var rawData = [];
-
-        $.each(data.split(/\r\n|\n/), function (idx, val) {
-            if (idx > 0) {
-                rawData.push(val.split(/,/));
-            } else {
-                position = buildPositions(val);
-            }
-        });
-        D.resolve(settings, position, rawData);
+        D.resolve(settings, JSON.parse(data));
     } else {
         D.reject(null, 'parseData failure', 'non-success status');
     }
@@ -225,12 +205,34 @@ function parseDataCsv(settings, data, status, jqXHR) {
 
         $.each(data.split(/\r\n|\n/), function (idx, val) {
             if (idx > 0) {
-                rawData.push(val.split(/,/));
+                var row = val.split(/,/);
+                rawData.push({
+                    bib: row[position['Bib']],
+                    name: row[position['Name']],
+                    team: row[position['Team']],
+                    start: row[position['Start']],
+                    division: row[position['Division']],
+                    gender: row[position['Gender']],
+                    age: row[position['Age']],
+                    duration: {
+                        swim: row[position['Swim']],
+                        t1: row[position['T1']],
+                        bike: row[position['Bike']],
+                        t2: row[position['T2']],
+                        run: row[position['Run']],
+                        total: row[position['Elapsed']]
+                    },
+                    placements: {
+                        division: row[position['Div Place']],
+                        gender: row[position['Gender Place']],
+                        age: row[position['Age Place']]
+                    }
+                });
             } else {
                 position = buildPositions(val);
             }
         });
-        D.resolve(settings, position, rawData);
+        D.resolve(settings, rawData);
     } else {
         D.reject(null, 'parseData failure', 'non-success status');
     }
@@ -238,20 +240,20 @@ function parseDataCsv(settings, data, status, jqXHR) {
     return D.promise();
 }
 
-function filterData(settings, position, rawData) {
+function filterData(settings, rawData) {
     var D = $.Deferred();
     var data = rawData;
     var filters = settings.filters;
 
     if (filters.division) {
         data = data.filter(function (val) {
-            return val[position['Division']] === filters.division;
+            return val.division === filters.division;
         });
     }
 
     if (filters.gender) {
         data = data.filter(function (val) {
-            return val[position['Gender']] === filters.gender;
+            return val.gender === filters.gender;
         });
     }
 
@@ -261,25 +263,25 @@ function filterData(settings, position, rawData) {
         });
 
         data = data.filter(function (val) {
-            var age = parseInt(val[position['Age']]);
+            var age = parseInt(val.age);
             return age >= bounds[0] && age <= bounds[1];
         });
     }
 
     if (!filters.nonStarters) {
         data = data.filter(function (val) {
-            return val[position['Swim']] !== ZERO_DURATION;
+            return val.duration.swim !== ZERO_DURATION;
         });
     }
 
     if (!filters.nonFinishers) {
         data = data.filter(function (val) {
-            return val[position['Elapsed']] !== ZERO_DURATION;
+            return val.duration.total !== ZERO_DURATION;
         });
     }
 
     if (data.length) {
-        D.resolve(settings, position, data);
+        D.resolve(settings, data);
     } else {
         D.reject(null, 'filterData failure', 'no data left after filtering');
     }
@@ -287,12 +289,14 @@ function filterData(settings, position, rawData) {
     return D.promise();
 }
 
-function computeStats(settings, position, filteredData) {
+function computeStats(settings, filteredData) {
     var D = $.Deferred();
     var data = {};
 
-    var bibStats = filteredData.filter(function (val) {
-        return val[position['Bib']] === settings.bib+'';
+    var dataWithElapsed = createAllTimes(filteredData);
+
+    var bibStats = dataWithElapsed.filter(function (val) {
+        return val.bib === settings.bib+'';
     });
     if (bibStats.length !== 1) {
         D.reject(null, 'computeStats failure', 'bib not present in filtered data');
@@ -300,22 +304,25 @@ function computeStats(settings, position, filteredData) {
     // Flatten it.  This would be faster to just loop through manually and grab the first row, of course.
     bibStats = bibStats[0];
 
-    var dataWithElapsed = createAllTimes(position, filteredData);
-
     var interestingBits = { 
         bib: settings.bib
     };
 
-    if (bibStats[position['USAT Penalty']] !== ZERO_DURATION) {
+    if (bibStats.penalty && bibStats.penalty !== ZERO_DURATION) {
         interestingBits.penalty = true;
     }
 
-    var threshKeys = [ 'Swim', 'T1', 'T1_elapsed', 'Bike', 'Bike_elapsed', 'T2', 'T2_elapsed', 'Run', 'Elapsed' ];
-    var leadersKeys = [ 'Swim', 'T1_elapsed', 'Bike_elapsed', 'T2_elapsed', 'Elapsed' ];
+    var threshKeys = [ 'duration.swim', 
+                       'duration.t1', 'elapsed.t1', 
+                       'duration.bike', 'elapsed.bike', 
+                       'duration.t2', 'elapsed.t2', 
+                       'duration.run', 'duration.total' ];
+    var leadersKeys = [ 'duration.swim', 'duration.t1', 'duration.bike', 'duration.t2', 'duration.total' ];
     
     var thresh = { };
     $.each(threshKeys, function (idx, val) {
-        thresh[val] = duration.convertToSeconds(bibStats[position[val]]);
+        var keys = val.split('.');
+        thresh[val] = duration.convertToSeconds(bibStats[keys[0]][keys[1]]);
         interestingBits[val] = {
             pos: 1,
             total: 0,
@@ -325,15 +332,16 @@ function computeStats(settings, position, filteredData) {
 
     $.each(dataWithElapsed, function (racerIdx, racerVals) {
         $.each(threshKeys, function (threshIdx, stage) {
-            if (racerVals[position[stage]] !== ZERO_DURATION) {
+            var keys = stage.split('.');
+            if (racerVals[keys[0]][keys[1]] !== ZERO_DURATION) {
                 interestingBits[stage].total += 1;
 
-                if (duration.convertToSeconds(racerVals[position[stage]]) < thresh[stage]) {
+                if (duration.convertToSeconds(racerVals[keys[0]][keys[1]]) < thresh[stage]) {
                     interestingBits[stage].pos += 1;
 
                     // If this is one that we care about passed N/passed by M, put the bib in the array
                     if (leadersKeys.indexOf(stage) !== -1) {
-                        interestingBits[stage].leaders.add(racerVals[position['Bib']]);
+                        interestingBits[stage].leaders.add(racerVals.bib);
                     }
                 }
             }
@@ -370,19 +378,16 @@ function computeStats(settings, position, filteredData) {
     return D.promise();
 }
 
-function createAllTimes(position, inData) {
+function createAllTimes(inData) {
     // Copy the data, because memory isn't a concern in 2016, right? :-P
-    var rv = inData.slice();
+    var rv = JSON.parse(JSON.stringify(inData));
 
-    // Set up the positional indices, to be consistent
-    position['T1_elapsed']   = Object.keys(position).length;
-    position['Bike_elapsed'] = Object.keys(position).length;
-    position['T2_elapsed']   = Object.keys(position).length;
-    
     $.each(rv, function (idx, val) {
-        val[position['T1_elapsed']]   = addDurations(val[position['Swim']], val[position['T1']]);
-        val[position['Bike_elapsed']] = addDurations(val[position['T1_elapsed']], val[position['Bike']]);
-        val[position['T2_elapsed']]   = addDurations(val[position['Bike_elapsed']], val[position['T2']]);
+        val.elapsed      = { };
+        val.elapsed.swim = val.duration.swim;
+        val.elapsed.t1   = addDurations(val.duration.swim, val.duration.t1);
+        val.elapsed.bike = addDurations(val.elapsed.t1, val.duration.bike);
+        val.elapsed.t2   = addDurations(val.elapsed.bike, val.duration.t2);
     });
 
     return rv;
@@ -403,25 +408,25 @@ function displayResults(resultData) {
 
     $('#BibNum').text(resultData.bib);
 
-    $('#Swim_Nth').text(resultData['Swim'].pos);
-    fillInPassers($('#Swim_Pos'), resultData['Swim']);
-    $('#Swim_Total').text(resultData['Swim'].total);
+    $('#Swim_Nth').text(resultData['duration.swim'].pos);
+    fillInPassers($('#Swim_Pos'), resultData['duration.swim']);
+    $('#Swim_Total').text(resultData['duration.swim'].total);
 
-    $('#T1_Nth').text(resultData['T1'].pos);
-    fillInPassers($('#T1_Pos'), resultData['T1_elapsed']);
-    $('#T1_Total').text(resultData['T1'].total);
+    $('#T1_Nth').text(resultData['duration.t1'].pos);
+    fillInPassers($('#T1_Pos'), resultData['elapsed.t1']);
+    $('#T1_Total').text(resultData['duration.t1'].total);
 
-    $('#Bike_Nth').text(resultData['Bike'].pos);
-    fillInPassers($('#Bike_Pos'), resultData['Bike_elapsed']);
-    $('#Bike_Total').text(resultData['Bike'].total);
+    $('#Bike_Nth').text(resultData['duration.bike'].pos);
+    fillInPassers($('#Bike_Pos'), resultData['elapsed.bike']);
+    $('#Bike_Total').text(resultData['duration.bike'].total);
 
-    $('#T2_Nth').text(resultData['T2'].pos);
-    fillInPassers($('#T2_Pos'), resultData['T2_elapsed']);
-    $('#T2_Total').text(resultData['T2'].total);
+    $('#T2_Nth').text(resultData['duration.t2'].pos);
+    fillInPassers($('#T2_Pos'), resultData['elapsed.t2']);
+    $('#T2_Total').text(resultData['duration.t2'].total);
 
-    $('#Run_Nth').text(resultData['Run'].pos);
-    fillInPassers($('#Run_Pos'), resultData['Elapsed']);
-    $('#Run_Total').text(resultData['Run'].total);
+    $('#Run_Nth').text(resultData['duration.run'].pos);
+    fillInPassers($('#Run_Pos'), resultData['duration.total']);
+    $('#Run_Total').text(resultData['duration.run'].total);
 
     return D.promise();
 }
