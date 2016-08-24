@@ -18,7 +18,52 @@
         <div class="row">
             <h1 class="bd-title">Prospector - Digging interesting stats out of Racemine results</h1>
 
-            <button class="btn btn-primary" onclick="doTheThing()">Go</button>
+            <div id="urlEntry">
+                <div class="col-md-2"><p align="right">Entrant "share" link</p></div>
+                <div class="col-md-8"><input id="entrantUrl" type="text" style="width:80%" autofocus></div>
+                <div class="col-md-1"><button class="btn btn-primary" onclick="getEntrant()">Go</button></div>
+            </div>
+
+            <hr>
+
+            <div id="mineSelector">
+                <div id="entrantDetails" class="col-md-12">Details</div>
+                <table class="table table-bordered table-striped" style="width:40%;">
+                    <tr>
+                        <th class="text-nowrap" style="width:20%;">Name</th>
+                        <td id="Results_Name"></td>
+                    </tr>
+                    <tr>
+                        <th class="text-nowrap">Bib #</th>
+                        <td id="Results_Bib"></td>
+                    </tr>
+                    <tr>
+                        <th class="text-nowrap">Division</th>
+                        <td>
+                            <span id="Results_Division"></span>
+                            <button class="btn" style="float:right;" id="Compare_Division">Compare</button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th class="text-nowrap">Gender</th>
+                        <td>
+                            <span id="Results_Gender"></span>
+                            <button class="btn" style="float:right;" id="Compare_Gender">Compare</button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th class="text-nowrap">Age Group</th>
+                        <td>
+                            <span id="Results_AG"></span>
+                            <button class="btn" style="float:right;" id="Compare_AG">Compare</button>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+
+            <hr>
+
+<!--             <button class="btn btn-primary" onclick="doTheThing()">Go</button> -->
 
             <div class="col-md-9 bd-content" id="results">
                 <div class="table-responsive">

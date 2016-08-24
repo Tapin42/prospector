@@ -1,6 +1,6 @@
 var DATA_URL = 'data.csv';
 //var DATA_URL = 'http://georesults.racemine.com/USA-Productions/events/2016/Half-Moon-Bay-Triathlons/results';
-var BIB_NUMBER = 887;
+var BIB_NUMBER = 250;
 var ZERO_DURATION = '0:00:00';
 
 // http://stackoverflow.com/questions/901115/how-can-i-get-query-string-values-in-javascript
@@ -18,16 +18,95 @@ var queryString = (function(a) {
     return b;
 })(window.location.search.substr(1).split('&'));
 
+function getEntrant() {
+
+    var nodeEntrantUrl = "http://" + window.location.hostname + ":7223/readBib?bib=" + encodeURIComponent($('#entrantUrl').val());
+    console.log(nodeEntrantUrl);
+
+    $.ajax(nodeEntrantUrl)
+        .then(function (data, textStatus, jqXHR) {
+            populateResults(JSON.parse(data));
+        })
+        .fail(function (jqXHR, textStatus, errorThrown) {
+            $('#entrantDetails').text('Error: ' + errorThrown);
+        });
+}
+
+function populateResults(results) {
+
+    function buildUrl(opts) {
+        var baseUrl = $('#entrantUrl').val();
+        var rawUrl = baseUrl.substr(0, baseUrl.lastIndexOf(results.bib));
+        var queryParams = ['q='];
+
+        opts.division && queryParams.push('SearchDivision=' + opts.division);
+        opts.gender && queryParams.push('SearchGender=' + opts.gender);
+        if (opts.ageGroup) {
+            queryParams.push('SearchAgeGroup=' + opts.ageGroup);
+        } else {
+            queryParams.push('SearchAgeGroup=All');
+        }
+
+        rawUrl = rawUrl + 'search?' + queryParams.join('&');
+
+        return "http://" + window.location.hostname + ":7223/readResults?url=" + encodeURIComponent(rawUrl);
+    }
+
+    $('#Results_Name').text(results.name);
+    $('#Results_Bib').text(results.bib);
+    $('#Results_Division').text(results.division);
+    $('#Results_Gender').text(results.gender);
+    $('#Results_AG').text(results.ageGroup);
+
+    $('#Compare_Division').click(function() {
+        doTheThing({
+            url: buildUrl({
+                division: results.division
+            }),
+            bib: results.bib
+        });
+    });
+
+    $('#Compare_Gender').click(function() {
+        doTheThing({
+            url: buildUrl({
+                division: results.division,
+                gender: results.gender
+            }),
+            bib: results.bib
+        });
+    });
+
+    $('#Compare_AG').click(function() {
+        doTheThing({
+            url: buildUrl({
+                division: results.division,
+                gender: results.gender,
+                ageGroup: results.ageGroup.split(' ')[1]
+            }),
+            bib: results.bib
+        });
+    });
+
+    window.results = results;
+}
+
 // Zhu Li!
-function doTheThing() {
+function doTheThing(options) {
+    if (!options) {
+        options = {};
+    }
+    
     var settings = {
-        url: DATA_URL,
-        bib: queryString['bib'] || BIB_NUMBER,
+        url: options.url || DATA_URL,
+        bib: options.bib || queryString['bib'] || BIB_NUMBER,
         filters: {
             nonStarters: true,
             nonFinishers: true
         }
     };
+
+    var parseData = parseDataCsv;
 
     loadData(settings)
         .then(parseData)
@@ -93,7 +172,42 @@ function loadData(settings) {
     return D.promise();
 }
 
-function parseData(settings, data, status, jqXHR) {
+//TODO: This takes the results from the node side, and is already (stringified) JSON.  parseDataCsv
+//  builds an array of data with positional data taken from the header.  Honestly, we should probably
+//  switch parseDataCsv and the downstream handlers to build a JSON array like the node-side results,
+//  since that's how we'll want to build everything anyway
+function parseDataRacemine(settings, data, status, jqXHR) {
+    function buildPositions(rawHeader) {
+        var posData = rawHeader.split(/,/);
+        var rv = {};
+        $.each(posData, function (idx, val) {
+            rv[val] = idx;
+        });
+
+        return rv;
+    }
+
+    var D = $.Deferred();
+    if (status === 'success') {
+        var position = {};
+        var rawData = [];
+
+        $.each(data.split(/\r\n|\n/), function (idx, val) {
+            if (idx > 0) {
+                rawData.push(val.split(/,/));
+            } else {
+                position = buildPositions(val);
+            }
+        });
+        D.resolve(settings, position, rawData);
+    } else {
+        D.reject(null, 'parseData failure', 'non-success status');
+    }
+
+    return D.promise();
+}
+
+function parseDataCsv(settings, data, status, jqXHR) {
     function buildPositions(rawHeader) {
         var posData = rawHeader.split(/,/);
         var rv = {};
