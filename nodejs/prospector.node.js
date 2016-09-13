@@ -1,10 +1,13 @@
 var express = require('express');
+var cors    = require('cors');
 var fs      = require('fs');
 var request = require('request');
 var cheerio = require('cheerio');
 var urlObj  = require('url');
 var Q       = require('q');
 var app     = express();
+
+app.use(cors());
 
 var PORT = 7223;  // "RACE".  Geddit?
 var DIVISIONS_URL = 'http://georesults.racemine.com/USA-Productions/events/2016/Oakland-Triathlon-Festival/results';
@@ -205,9 +208,6 @@ app.get('/readResults', function (req, res) {
 
     readResults(url)
         .then(function (rv) {
-            if (req.headers.origin) {
-                res.setHeader('Access-Control-Allow-Origin', req.headers.origin);
-            }
             res.send(JSON.stringify(rv));
             console.log('Done');
         })
@@ -230,9 +230,6 @@ app.get('/readDivisions', function (req, res) {
             // }
             // console.log(req.origin);
 
-            if (req.headers.origin) {
-                res.setHeader('Access-Control-Allow-Origin', req.headers.origin);
-            }
             res.send($('#Divisions').val());
             console.log('Done');
         } else {
@@ -247,9 +244,6 @@ app.get('/readBib', function (req, res) {
     request(bibUrl, function (err, resp, html) {
         if (!err) {
             console.log('Got ' + bibUrl + ', parsing...');
-            if (req.headers.origin) {
-                res.setHeader('Access-Control-Allow-Origin', req.headers.origin);
-            }
             res.send(JSON.stringify(parseBibInfo(html)));
             console.log('Done');
         } else {
