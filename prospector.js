@@ -19,6 +19,7 @@ var queryString = (function(a) {
 
 function getEntrant() {
 
+    $('#goBtn').attr('data-loader', 'circle').text('');
     var nodeEntrantUrl = "http://" + window.location.hostname + ":7223/readBib?bib=" + encodeURIComponent($('#entrantUrl').val());
     console.log(nodeEntrantUrl);
 
@@ -28,6 +29,9 @@ function getEntrant() {
         })
         .fail(function (jqXHR, textStatus, errorThrown) {
             $('#entrantDetails').text('Error: ' + errorThrown);
+        })
+        .always(function () {
+            $('#goBtn').attr('data-loader', '').text('Go');
         });
 }
 
