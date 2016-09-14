@@ -19,7 +19,7 @@ var queryString = (function(a) {
 
 function getEntrant() {
 
-    var nodeEntrantUrl = "http://" + window.location.hostname + ":7223/readBib?bib=" + encodeURIComponent($('#entrantUrl').val());
+    var nodeEntrantUrl = "http://" + window.location.hostname + ":7223/readBib?url=" + encodeURIComponent($('#entrantUrl').val());
     console.log(nodeEntrantUrl);
 
     $.ajax(nodeEntrantUrl)
