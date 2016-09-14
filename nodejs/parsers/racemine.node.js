@@ -234,7 +234,7 @@ function readDivisions(req, res) {
 }
 
 function readBib(req, res) {
-    var bibUrl = req.query.bib ? req.query.bib : BIB_URL;
+    var bibUrl = req.query.url ? req.query.url : BIB_URL;
     console.log('Requesting ' + bibUrl + '...');
     request(bibUrl, function (err, resp, html) {
         if (!err) {
