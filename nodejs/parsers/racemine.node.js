@@ -209,30 +209,6 @@ function readResults(req, res) {
 }
 
 
-//TODO: Prove this is useful, or eliminate it.  It's not currently being used and is in danger of 
-//      just being cruft.  Might already be past that point.
-function readDivisions(req, res) {
-    var url = DIVISIONS_URL;
-    console.log('Requesting ' + url + '...');
-    request(url, function (err, resp, html) {
-        if (!err) {
-            console.log('Got ' + url + ', parsing with cheerio...');
-            var $ = cheerio.load(html);
-            // console.log('Looking for divisions...');
-            // console.log(req);
-            // for (var k in res) {
-            //     console.log('k: ' + k);
-            // }
-            // console.log(req.origin);
-
-            res.send($('#Divisions').val());
-            console.log('Done');
-        } else {
-            res.send('Error reading from "' + url + '".');
-        }
-    });
-}
-
 function readBib(req, res) {
     var bibUrl = req.query.url ? req.query.url : BIB_URL;
     console.log('Requesting ' + bibUrl + '...');
@@ -244,12 +220,11 @@ function readBib(req, res) {
         } else {
             res.send('Error reading from "' + bibUrl + '".');
         }
-    })
+    });
 }
 
 module.exports = {
-    domain:'racemine.com',
-    readResults: readResults,
-    readDivisions: readDivisions,
-    readBib: readBib
+    domain:        'racemine.com',
+    readResults:   readResults,
+    readBib:       readBib
 };

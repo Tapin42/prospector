@@ -5,9 +5,14 @@
   "license": "MIT",
   "repository": "https://github.com/Tapin42/prospector",
   "dependencies": {
+    "chai": "^3.5.0",
     "cors": "^2.8.1",
     "express": "^4.13.4",
+    "mocha": "^3.0.2",
     "request": "^2.72.0"
+  },
+  "scripts": {
+    "test": "./node_modules/.bin/mocha --recursive --reporter spec"
   },
   "devDependencies": {
     "cheerio": "^0.20.0",

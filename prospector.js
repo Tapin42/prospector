@@ -38,6 +38,7 @@ function populateResults(results) {
         var rawUrl = baseUrl.substr(0, baseUrl.lastIndexOf(results.bib));
         var queryParams = ['q='];
 
+        // All of this logic is Racemine-specific.  Which means it should really be on the back-end
         opts.division && queryParams.push('SearchDivision=' + opts.division);
         opts.gender && queryParams.push('SearchGender=' + opts.gender);
         if (opts.ageGroup) {
