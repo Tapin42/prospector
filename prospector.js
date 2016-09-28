@@ -46,21 +46,21 @@ function populateResults(results) {
     $('#Compare_Division').click(function() {
         doTheThing({
             url: buildUrl(results.groups.division.url),
-            bib: results.bib
+            bib: results.participant.bib
         });
     });
 
     $('#Compare_Gender').click(function() {
         doTheThing({
             url: buildUrl(results.groups.gender.url),
-            bib: results.bib
+            bib: results.participant.bib
         });
     });
 
     $('#Compare_AG').click(function() {
         doTheThing({
             url: buildUrl(results.groups.ageGroup.url),
-            bib: results.bib
+            bib: results.participant.bib
         });
     });
 

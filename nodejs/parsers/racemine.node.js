@@ -152,7 +152,7 @@ function parseBibInfo(html, bibUrl) {
     opts.gender = rv.groups.gender.label;
     rv.groups.gender.url = buildUrl(opts);
 
-    opts.ageGroup = rv.groups.ageGroup.label;
+    opts.ageGroup = rv.groups.ageGroup.label.split(' ')[1];
     rv.groups.ageGroup.url = buildUrl(opts);
 
     return rv;
