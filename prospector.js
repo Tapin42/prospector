@@ -31,59 +31,36 @@ function getEntrant() {
         });
 }
 
+function buildUrl(url) {
+    return 'http://' + window.location.hostname + ':7223/readResults?url=' + encodeURIComponent(url);
+}
+
 function populateResults(results) {
 
-    function buildUrl(opts) {
-        var baseUrl = $('#entrantUrl').val();
-        var rawUrl = baseUrl.substr(0, baseUrl.lastIndexOf(results.bib));
-        var queryParams = ['q='];
-
-        opts.division && queryParams.push('SearchDivision=' + opts.division);
-        opts.gender && queryParams.push('SearchGender=' + opts.gender);
-        if (opts.ageGroup) {
-            queryParams.push('SearchAgeGroup=' + opts.ageGroup);
-        } else {
-            queryParams.push('SearchAgeGroup=All');
-        }
-
-        rawUrl = rawUrl + 'search?' + queryParams.join('&');
-
-        return "http://" + window.location.hostname + ":7223/readResults?url=" + encodeURIComponent(rawUrl);
-    }
-
-    $('#Results_Name').text(results.name);
-    $('#Results_Bib').text(results.bib);
-    $('#Results_Division').text(results.division);
-    $('#Results_Gender').text(results.gender);
-    $('#Results_AG').text(results.ageGroup);
+    $('#Results_Name').text(results.participant.name);
+    $('#Results_Bib').text(results.participant.bib);
+    $('#Results_Division').text(results.groups.division.label);
+    $('#Results_Gender').text(results.groups.gender.label);
+    $('#Results_AG').text(results.groups.ageGroup.label);
 
     $('#Compare_Division').click(function() {
         doTheThing({
-            url: buildUrl({
-                division: results.division
-            }),
-            bib: results.bib
+            url: buildUrl(results.groups.division.url),
+            bib: results.participant.bib
         });
     });
 
     $('#Compare_Gender').click(function() {
         doTheThing({
-            url: buildUrl({
-                division: results.division,
-                gender: results.gender
-            }),
-            bib: results.bib
+            url: buildUrl(results.groups.gender.url),
+            bib: results.participant.bib
         });
     });
 
     $('#Compare_AG').click(function() {
         doTheThing({
-            url: buildUrl({
-                division: results.division,
-                gender: results.gender,
-                ageGroup: results.ageGroup.split(' ')[1]
-            }),
-            bib: results.bib
+            url: buildUrl(results.groups.ageGroup.url),
+            bib: results.participant.bib
         });
     });
 

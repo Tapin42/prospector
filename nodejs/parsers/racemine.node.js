@@ -21,51 +21,139 @@ var RESULTS_URL = 'http://georesults.racemine.com/usa-productions/events/2016/oa
 // &sortdirection=
 // &_=1470152672573";
 
-function parseBibInfo(html) {
+
+function normalizeTime(inTime) {
+    // This is going to be super-dumb for now.  Get rid of hours if it's just 00.
+    var timeBits = inTime.split(':');
+    if (timeBits.length === 3 && timeBits[0] === '00') {
+        timeBits.shift();
+    }
+    return timeBits.join(':');
+}
+
+function buildUrl(opts) {
+    var baseUrl = opts.baseUrl;
+    var rawUrl = baseUrl.substr(0, baseUrl.lastIndexOf(opts.bib));
+    var queryParams = ['q='];
+
+    // All of this logic is Racemine-specific.  Which means it should really be on the back-end
+    opts.division && queryParams.push('SearchDivision=' + encodeURIComponent(opts.division));
+    opts.gender && queryParams.push('SearchGender=' + encodeURIComponent(opts.gender));
+    if (opts.ageGroup) {
+        queryParams.push('SearchAgeGroup=' + encodeURIComponent(opts.ageGroup));
+    } else {
+        queryParams.push('SearchAgeGroup=All');
+    }
+
+    rawUrl = rawUrl + 'search?' + queryParams.join('&');
+
+    return rawUrl;
+}
+
+function parseBibInfo(html, bibUrl) {
     var $ = cheerio.load(html);
 
     var rv = {
-        name: null,
-        bib: null,
-        division: null,
-        gender: null,
-        ageGroup: null,
-        duration: {
-            swim: null,
-            t1: null,
-            bike: null,
-            t2: null,
-            run: null,
-            total: null
+        participant: {
+            name:     null,
+            bib:      null
+        },
+        groups: {
+            division: {
+                label: null,
+                url: 'TODO-Division'
+            },
+            gender: {
+                label: null,
+                url: 'TODO-Gender'
+            },
+            ageGroup: {
+                label: null,
+                url: 'TODO-AgeGroup'
+            }
         }
     };
 
-    rv.name = $('#modalStats h3:first-child').text();
+    rv.participant.name = $('#modalStats h3:first-child').text();
 
     var $stats = $('#modalStats table > tbody');
+    var storeLabels = false;
+    var labels = [];
+    var splits = [];
+
     $stats.children('tr').each(function (idx, elem) {
         $tr = $(this);
         var hdr = $tr.find('th').text();
         var val = $tr.find('td').text();
 
+        if (storeLabels) {
+            labels.push(hdr);
+        }
+
         switch (hdr) {
-            case 'Bib Number': rv.bib = val; break;
-            case 'Gender': rv.gender = val; break;
-            case 'Swim': rv.duration.swim = val; break;
-            case 'T1': rv.duration.t1 = val; break;
-            case 'Bike': rv.duration.bike = val; break;
-            case 'T2': rv.duration.t2 = val; break;
-            case 'Run': rv.duration.run = val; break;
-            case 'Elapsed': rv.duration.total = val; break;
+            case 'Bib Number': 
+                rv.participant.bib = val; 
+                break;
+
+            case 'Gender': 
+                rv.groups.gender.label = val; 
+                break;
+            
+            case 'Start Time': 
+                storeLabels = true; 
+                break;
+            
+            case 'Swim': 
+            case 'T1': 
+            case 'Bike': 
+            case 'T2': 
+            case 'Run': 
+            case 'Run 1':
+            case 'Run 2':
+                splits.push(normalizeTime(val));
+                break;
+
+            case 'Elapsed': 
+                rv.finishTime = val;
+                labels.pop();
+                storeLabels = false;
+                break;
         };
 
         // And unfortunately the divisions and AG name are positional...
         if (idx === 1) {
-            rv.division = hdr;
+            rv.groups.division.label = hdr;
         } else if (idx === 3) {
-            rv.ageGroup = hdr;
+            rv.groups.ageGroup.label = hdr;
         }
     });
+
+    // Determine which labels to use
+    rv.splitLabels = [];  // Still need to figure out a reasonable default here
+    if (labels.length === 5) {
+        if (labels[0].match(/swim/i)) {
+            // Assume triathlon
+            rv.splitLabels = ['Swim', 'T1', 'Bike', 'T2', 'Run'];
+        } else if (labels[0].match(/run/i)) {
+            // Assume duathlon
+            rv.splitLabels = ['R1', 'T1', 'Bike', 'T2', 'R2'];
+        }
+    }
+    rv.splits = splits;
+
+    // Build the URLs
+    var opts = {
+        baseUrl: bibUrl,
+        bib: rv.participant.bib,
+        division: rv.groups.division.label,
+    };
+    rv.groups.division.url = buildUrl(opts);
+    
+    opts.gender = rv.groups.gender.label;
+    rv.groups.gender.url = buildUrl(opts);
+
+    opts.ageGroup = rv.groups.ageGroup.label.split(' ')[1];
+    rv.groups.ageGroup.url = buildUrl(opts);
 
     return rv;
 }
@@ -209,47 +297,22 @@ function readResults(req, res) {
 }
 
 
-//TODO: Prove this is useful, or eliminate it.  It's not currently being used and is in danger of 
-//      just being cruft.  Might already be past that point.
-function readDivisions(req, res) {
-    var url = DIVISIONS_URL;
-    console.log('Requesting ' + url + '...');
-    request(url, function (err, resp, html) {
-        if (!err) {
-            console.log('Got ' + url + ', parsing with cheerio...');
-            var $ = cheerio.load(html);
-            // console.log('Looking for divisions...');
-            // console.log(req);
-            // for (var k in res) {
-            //     console.log('k: ' + k);
-            // }
-            // console.log(req.origin);
-
-            res.send($('#Divisions').val());
-            console.log('Done');
-        } else {
-            res.send('Error reading from "' + url + '".');
-        }
-    });
-}
-
 function readBib(req, res) {
     var bibUrl = req.query.url ? req.query.url : BIB_URL;
     console.log('Requesting ' + bibUrl + '...');
     request(bibUrl, function (err, resp, html) {
         if (!err) {
             console.log('Got ' + bibUrl + ', parsing...');
-            res.send(JSON.stringify(parseBibInfo(html)));
+            res.send(JSON.stringify(parseBibInfo(html, bibUrl)));
             console.log('Done');
         } else {
             res.send('Error reading from "' + bibUrl + '".');
         }
-    })
+    });
 }
 
 module.exports = {
-    domain:'racemine.com',
-    readResults: readResults,
-    readDivisions: readDivisions,
-    readBib: readBib
+    domain:        'racemine.com',
+    readResults:   readResults,
+    readBib:       readBib
 };
