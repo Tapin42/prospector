@@ -86,7 +86,6 @@ function parseBibInfo(rawJson) {
                     label: result.ClassName,
                     url: 'TODO-AgeGroup'
                 }
-
             }
         };
 
