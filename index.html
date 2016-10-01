@@ -3,6 +3,8 @@
 <title>Prospector</title>
 <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
 <script src="https://code.jquery.com/jquery-2.2.3.min.js"></script>
+<script src="./stats/elapsedTimes.js"></script>
+<script src="./stats/passers.js"></script>
 <script src="./prospector.js"></script>
 <style>
 .passers {
@@ -65,52 +67,7 @@
 
 <!--             <button class="btn btn-primary" onclick="doTheThing()">Go</button> -->
 
-            <div class="col-md-9 bd-content" id="results">
-                <div class="table-responsive">
-                    <table class="table table-bordered table-striped">
-                        <thead>
-                            <tr>
-                                <th>Bib #<span id="BibNum"></span></th>
-                                <th class="text-xs-center">Nth fastest leg</th>
-                                <th class="text-xs-center">Exited in position</th>
-                                <th class="text-xs-center">...out of</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <th class="text-nowrap" scope="row">Swim</th>
-                                <td id="Swim_Nth"></td>
-                                <td id="Swim_Pos"></td>
-                                <td id="Swim_Total"></td>
-                            </tr>
-                            <tr>
-                                <th class="text-nowrap" scope="row">T1</th>
-                                <td id="T1_Nth"></td>
-                                <td id="T1_Pos"></td>
-                                <td id="T1_Total"></td>
-                            </tr>
-                            <tr>
-                                <th class="text-nowrap" scope="row">Bike</th>
-                                <td id="Bike_Nth"></td>
-                                <td id="Bike_Pos"></td>
-                                <td id="Bike_Total"></td>
-                            </tr>
-                            <tr>
-                                <th class="text-nowrap" scope="row">T2</th>
-                                <td id="T2_Nth"></td>
-                                <td id="T2_Pos"></td>
-                                <td id="T2_Total"></td>
-                            </tr>
-                            <tr>
-                                <th class="text-nowrap" scope="row">Run</th>
-                                <td id="Run_Nth"></td>
-                                <td id="Run_Pos"></td>
-                                <td id="Run_Total"></td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+            <div class="col-md-9 bd-content" id="results"></div>
         </div>
     </div>
 </div>

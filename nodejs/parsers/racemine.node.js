@@ -161,31 +161,54 @@ function parseBibInfo(html, bibUrl) {
 function parseSearchInfo(html) {
     var $ = cheerio.load(html);
 
-    var rv = []; 
+    var rv = {
+        labels: [],
+        entrants: []
+    }; 
     var cols = {
         bib: -1,
-        duration: {
-            swim: -1,
-            t1: -1,
-            bike: -1,
-            t2: -1,
-            run: -1,
-            total: -1
-        }
+        name: -1,
+        splits: [ ],
+        finish: -1
     };
 
     var $cols = $('table > thead > tr');
+    var storeLabels = false;
     $cols.children('th').each(function (idx, elem) {
         var hdr = $(this).text();
 
+        if (storeLabels) {
+            rv.labels.push(hdr);
+        }
+
         switch (hdr) {
             case 'Bib': cols.bib = idx; break;
-            case 'Swim': cols.duration.swim = idx; break;
-            case 'T1': cols.duration.t1 = idx; break;
-            case 'Bike': cols.duration.bike = idx; break;
-            case 'T2': cols.duration.t2 = idx; break;
-            case 'Run': cols.duration.run = idx; break;
-            case 'Elapsed': cols.duration.total = idx; break;
+            case 'Name': cols.name = idx; break; 
+
+            case 'Start':
+                storeLabels = true;
+                break;
+
+            case 'Swim': 
+            case 'T1': 
+            case 'Bike': 
+            case 'T2': 
+            case 'Run': 
+            case 'Run 1':
+            case 'Run 2':
+                cols.splits.push(idx);
+                break;
+
+            case 'USAT Penalty':
+                // Don't care about this, it's not a split and it comes out in the final time.
+                rv.labels.pop();
+                break;
+
+            case 'Elapsed': 
+                storeLabels = false;
+                rv.labels.pop();
+                cols.finish = idx; 
+                break;
         }
     });
 
@@ -193,35 +216,28 @@ function parseSearchInfo(html) {
     $stats.children('tr').each(function (idx, elem) {
         var entrant = {
             bib: null,
-            duration: {
-                swim: null,
-                t1: null,
-                bike: null,
-                t2: null,
-                run: null,
-                total: null
-            }
+            name: null,
+            splits: [],
+            finish: null
         };
 
         $(this).children('td').each(function (tdIdx, tdElem) {
             if (tdIdx === cols.bib) {
                 entrant.bib = $(tdElem).find('span').text();
-            } else if (tdIdx === cols.duration.swim) {
-                entrant.duration.swim = $(tdElem).find('span').text();
-            } else if (tdIdx === cols.duration.t1) {
-                entrant.duration.t1 = $(tdElem).find('span').text();
-            } else if (tdIdx === cols.duration.bike) {
-                entrant.duration.bike = $(tdElem).find('span').text();
-            } else if (tdIdx === cols.duration.t2) {
-                entrant.duration.t2 = $(tdElem).find('span').text();
-            } else if (tdIdx === cols.duration.run) {
-                entrant.duration.run = $(tdElem).find('span').text();
-            } else if (tdIdx === cols.duration.total) {
-                entrant.duration.total = $(tdElem).find('span').text();
+            } else if (tdIdx === cols.name) {
+                entrant.name = $(tdElem).find('a').text();
+            } else if (tdIdx === cols.finish) {
+                entrant.finish = $(tdElem).find('span').text();
+            } else {
+                for (var i=0; i<cols.splits.length; i++) {
+                    if (tdIdx === cols.splits[i]) {
+                        entrant.splits[i] = $(tdElem).find('span').text();
+                    }
+                }
             }
         });
 
-        rv[idx] = entrant;
+        rv.entrants[idx] = entrant;
     });
 
     return rv;
@@ -229,7 +245,7 @@ function parseSearchInfo(html) {
 
 function readResultPage(urlText, prevResults) {
     var deferred = Q.defer();
-    var rv = (prevResults && prevResults.length) ? prevResults : [];
+    var rv = (prevResults && prevResults.entrants.length) ? prevResults : {};
     var url = urlObj.parse(urlText, true);
     url.query._ = Date.now();
     
@@ -252,12 +268,17 @@ function readResultPage(urlText, prevResults) {
 
             var newResults = parseSearchInfo(html);
 
-            if (newResults && newResults.length) {
-                rv = rv.concat(newResults);
+            if (newResults && newResults.entrants.length) {
+                if (!rv.labels) {
+                    rv.labels = newResults.labels;
+                    rv.entrants = newResults.entrants;
+                } else {
+                    rv.entrants = rv.entrants.concat(newResults.entrants);
+                }
             }
 
-            console.log('page: ' + url.query.page + ' / pageSize: ' + url.query.pageSize + ' / newResults.length: ' + newResults.length);
-            if (newResults.length === parseInt(url.query.pageSize)) {
+            console.log('page: ' + url.query.page + ' / pageSize: ' + url.query.pageSize + ' / newResults.entrants.length: ' + newResults.entrants.length);
+            if (newResults.entrants.length === parseInt(url.query.pageSize)) {
                 // Silly clone...
                 var nextUrl = urlObj.parse(urlObj.format(url), true);
                 // console.log('nextUrl, after cloning but before page increment: ' + urlObj.format(nextUrl));
