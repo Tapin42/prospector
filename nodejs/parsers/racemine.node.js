@@ -3,13 +3,6 @@ var cheerio = require('cheerio');
 var urlObj  = require('url');
 var Q       = require('q');
 
-var DIVISIONS_URL = 'http://georesults.racemine.com/USA-Productions/events/2016/Oakland-Triathlon-Festival/results';
-// var DIVISIONS_URL = 'http://localhost/prospector/nodejs/oakland_tri_results.html';
-var BIB_URL = 'http://georesults.racemine.com/USA-Productions/events/2016/Oakland-Triathlon-Festival/250/entrant/share';
-// var BIB_URL = 'http://localhost/prospector/nodejs/oakland_bib_250.html';
-var RESULTS_URL = 'http://georesults.racemine.com/usa-productions/events/2016/oakland-triathlon-festival/search?q=&SearchDivision=INT-AGE+GROUP&SearchGender=M&SearchAgeGroup=40-44&pageSize=50&EventKey=15478&page=1&sortcolumn=&sortdirection=&_=1470152672573';
-// var RESULTS_URL = 'http://georesults.racemine.com/usa-productions/events/2016/oakland-triathlon-festival/search?q=&SearchDivision=INT-AGE+GROUP&pageSize=50&EventKey=15478&page=1&sortcolumn=&sortdirection=&_=1470152672573';
-
 // "http://georesults.racemine.com/usa-productions/events/2016/oakland-triathlon-festival/search?q=
 // &SearchDivision=INT-AGE+GROUP
 // &SearchGender=M
@@ -305,10 +298,11 @@ function readResultPage(urlText, prevResults) {
 }
 
 function readResults(req, res) {
-    var url = req.query.url || RESULTS_URL;
+    var url = req.query.url;
 
     readResultPage(url)
         .then(function (rv) {
+            res.setHeader('content-type', 'application/json');
             res.send(JSON.stringify(rv));
             console.log('Done');
         })
@@ -319,11 +313,12 @@ function readResults(req, res) {
 
 
 function readBib(req, res) {
-    var bibUrl = req.query.url ? req.query.url : BIB_URL;
+    var bibUrl = req.query.url;
     console.log('Requesting ' + bibUrl + '...');
     request(bibUrl, function (err, resp, html) {
         if (!err) {
             console.log('Got ' + bibUrl + ', parsing...');
+            res.setHeader('content-type', 'application/json');
             res.send(JSON.stringify(parseBibInfo(html, bibUrl)));
             console.log('Done');
         } else {

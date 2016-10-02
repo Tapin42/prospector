@@ -3,9 +3,112 @@ var cheerio = require('cheerio');
 var urlObj  = require('url');
 var Q       = require('q');
 
-var RESULTS_URL = 'https://www.athlinks.com/Athletes/270213731/Race/265578040';
+function parseSearchInfo(json) {
+    var rv = {
+        labels: [],
+        entrants: []
+    };
+
+    for (var i=0; i<json.Result.EventResults[0].RacerResults.length; i++) {
+        var racer = json.Result.EventResults[0].RacerResults[i];
+
+        if (i === 0) {
+            rv.labels = racer.LegEntries.map(function (elt) { return elt.ActionCatName; });
+        }
+
+        var entrant = {
+            bib: racer.BibNumber,
+            name: racer.DisplayName,
+            splits: racer.LegEntries.map(function (elt) { return elt.TicksString; }),
+            finish: racer.FinalTime
+        };
+
+        rv.entrants.push(entrant);
+    }
+
+    return rv;
+}
+
+function readResultPage(urlText, prevResults) {
+    var deferred = Q.defer();
+    var rv = (prevResults && prevResults.entrants.length) ? prevResults : {};
+    var url = urlObj.parse(urlText, true);
+
+    // if (prevResults.entrants.length) {
+    //     if (url.query.viewModeFilterRangeData) {
+    //         var newPage = 1+parseInt(url.query.viewModeFilterRangeData[1]);
+    //         url.query.viewModeFilterRangeData = url.query.viewModeFilterRangeData[0] + newPage;
+    //     } else {
+    //         // We'd previously requested the first page
+    //         url.query.viewMode = 'O';
+    //         url.query.viewModeFilterRangeData = 'A2';
+    //     }
+    // }
+    
+    console.log('Requesting ' + urlText + '...');
+    request(urlText, function (err, resp, rawJson) {
+        if (!err) {
+            console.log('Got ' + urlText + ', parsing...');
+            var json = JSON.parse(rawJson);
+
+            var newResults = parseSearchInfo(json);
+
+            if (newResults && newResults.entrants.length) {
+                if (!rv.labels) {
+                    rv.labels = newResults.labels;
+                    rv.entrants = newResults.entrants;
+                } else {
+                    rv.entrants = rv.entrants.concat(newResults.entrants);
+                }
+            }
+
+            // Athlinks always uses a page length of 100
+            if (newResults.entrants.length === 100) {
+                // Silly clone...
+                var nextUrl = urlObj.parse(urlText, true);
+
+                if (nextUrl.query.viewModeFilterRangeData) {
+                    var newPage = 1+parseInt(nextUrl.query.viewModeFilterRangeData[1]);
+                    nextUrl.query.viewModeFilterRangeData = nextUrl.query.viewModeFilterRangeData[0] + newPage;
+                } else {
+                    // We'd previously requested the first page
+                    nextUrl.query.viewMode = 'O';
+                    nextUrl.query.viewModeFilterRangeData = 'A2';
+                }
+
+                nextUrl.search = null;
+                // console.log('nextUrl, after page increment: ' + urlObj.format(nextUrl));
+
+                readResultPage(urlObj.format(nextUrl), rv)
+                    .then(function (allResults) {
+                        deferred.resolve(allResults);
+                    }).fail (function () {
+                        deferred.reject();
+                    });
+            } else {
+                deferred.resolve(rv);
+            }
+        } else {
+            deferred.reject(err);
+        }
+    });
+
+    return deferred.promise;
+}
+
 
 function readResults(req, res) { 
+    var url = req.query.url;
+
+    readResultPage(url)
+        .then(function (rv) {
+            res.setHeader('content-type', 'application/json');
+            res.send(JSON.stringify(rv));
+            console.log('Done');
+        })
+        .fail(function (rv) {
+            res.send('Error reading from "' + urlObj.format(url) + '": ' + rv + '.');
+        });
 }
 
 function convertToApi(url) {
@@ -143,7 +246,7 @@ function parseBibInfo(rawJson) {
 }
 
 function readBib(req, res) {
-    var url = req.query.url || RESULTS_URL;
+    var url = req.query.url;
     var bibUrl = convertToApi(url);
 
     console.log('Requesting ' + bibUrl + '...');

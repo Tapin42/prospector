@@ -88,4 +88,43 @@ describe('Athlinks.com parser', function () {
 
         });
     });
+
+    describe('readResults', function () {
+
+        this.timeout('20000');
+
+        var targetUrl = 'https://www.athlinks.com/Events/Race/Api/505280/Course/Results?isViewModeChange=false&courseData=753481%3A751266%3A341%3A118&viewMode=A&viewModeFilterRangeData=M6510376';
+        var prospectorUrl = 'http://localhost:7223/readResults?url=' + encodeURIComponent(targetUrl);
+        var json;
+
+        before(function (done) {
+            request(prospectorUrl, function (err, resp, body) {
+                json = JSON.parse(body);
+                done();
+            });
+        });
+
+        it('should have a valid set of labels', function () {
+            expect(typeof(json.labels)).to.equal('object');
+
+            var expectedAry = ["Swim", "Transition", "Bike/Cycle", "Transition", "Run"];
+            expect(compareAry(expectedAry, json.labels)).to.be.true;
+        });
+
+        it('should have an array of entrants', function () {
+            expect(typeof(json.entrants)).to.equal('object');
+        });
+
+        it('should have expected stats in each entrant block', function () {
+            var entrant = json.entrants[0];
+            expect(entrant.bib).to.equal('271');
+            expect(entrant.name).to.equal('ERICK PIERCE');
+            expect(entrant.finish).to.equal('2:15:15');
+
+            var expectedAry = ["20:39", "08:55", "1:00:36", "01:20", "43:44"];
+            expect(entrant.splits.length).to.equal(5);
+            expect(compareAry(expectedAry, entrant.splits)).to.be.true;
+        });
+    });
+
 });

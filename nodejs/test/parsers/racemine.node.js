@@ -114,5 +114,16 @@ describe('Racemine.com parser', function () {
         it('should have an array of entrants', function () {
             expect(typeof(json.entrants)).to.equal('object');
         });
+
+        it('should have expected stats in each entrant block', function () {
+            var entrant = json.entrants[0];
+            expect(entrant.bib).to.equal('22');
+            expect(entrant.name).to.equal('BRENT AUSTIN');
+            expect(entrant.finish).to.equal('02:13:36');
+
+            var expectedAry = ["00:26:10", "00:03:03", "01:07:21", "00:00:55", "00:36:05"];
+            expect(entrant.splits.length).to.equal(5);
+            expect(compareAry(expectedAry, entrant.splits)).to.be.true;
+        });
     });
 });

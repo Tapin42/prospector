@@ -26,7 +26,10 @@ function getEntrant() {
 
     $.ajax(nodeEntrantUrl)
         .then(function (data, textStatus, jqXHR) {
-            populateResults(JSON.parse(data));
+            if (typeof(data) === 'string') {
+                data = JSON.parse(data);
+            }
+            populateResults(data);
         })
         .fail(function (jqXHR, textStatus, errorThrown) {
             $('#entrantDetails').text('Error: ' + errorThrown);
@@ -165,7 +168,10 @@ function loadData(settings) {
 function parseDataRacemine(settings, data, status, jqXHR) {
     var D = $.Deferred();
     if (status === 'success') {
-        D.resolve(settings, JSON.parse(data));
+        if (typeof(data) === 'string') {
+            data = JSON.parse(data);
+        }
+        D.resolve(settings, data);
     } else {
         D.reject(null, 'parseData failure', 'non-success status');
     }
