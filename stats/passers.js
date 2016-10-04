@@ -131,7 +131,7 @@ var STAT_passers = {
                         </thead> \
                         <tbody id="passersBody"></tbody> \
                     </table> \
-                </div';
+                </div>';
         $('#results').append(template);
 
         for (var i=0; i<data.passers.length; i++) {
