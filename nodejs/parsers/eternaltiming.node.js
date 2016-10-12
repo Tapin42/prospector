@@ -14,7 +14,7 @@ function parseLabels($) {
     return rv;
 }
 
-function parseResults($) {
+function parseEntrants($) {
     var entrants = [];
 
     $('.resultsTable tbody tr').each(function () {
@@ -51,7 +51,7 @@ function parseBibInfo(html, bibUrl) {
     var $ = cheerio.load(html);
 
     var labels = parseLabels($);
-    var entrants = parseResults($);
+    var entrants = parseEntrants($);
     var bibInfo = entrants[0];
 
     var rv = {
@@ -81,8 +81,36 @@ function parseBibInfo(html, bibUrl) {
     return rv;
 }
 
+function parseResults(html) {
+    var $ = cheerio.load(html);
+
+    var labels = parseLabels($);
+    var entrants = parseEntrants($);
+
+    return {
+        labels: labels,
+        entrants: entrants
+    };
+}
+
 function readResults(req, res) {
-    res.send('{"error": "Unimplemented"}');
+    var url = req.query.url;
+    console.log('Requesting ' + bibUrl + '...');
+    request({
+            url: url,
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/52.0.2743.116 Safari/537.36'
+            }
+        }, function (err, resp, html) {
+        if (!err) {
+            console.log('Got ' + url + ', parsing...');
+            res.setHeader('content-type', 'application/json');
+            res.send(JSON.stringify(parseResults(html)));
+            console.log('Done');
+        } else {
+            res.send('Error reading from "' + url + '".');
+        }
+    });
 }
 
 function readBib(req, res) {
