@@ -58,19 +58,22 @@ var STAT_percentageVsBest = {
         var splitTimes = [];
         var finishTimes = [];
         $.each(data.entrants, function (idx, val) {
-            if (idx === 0) {
-                // Create the multidimensional array in splitTimes
-                for (i=0; i<val.splits.length; i++) {
-                    splitTimes.push([val.splits[i]]);
+            // We need to make sure everyone involved is a finisher
+            if (!duration.isZero(val.finish)) {
+                if (idx === 0) {
+                    // Create the multidimensional array in splitTimes
+                    for (i=0; i<val.splits.length; i++) {
+                        splitTimes.push([val.splits[i]]);
+                    }
+                } else {
+                    // Just push the new times into the array
+                    for (i=0; i<val.splits.length; i++) {
+                        splitTimes[i].push(val.splits[i]);
+                    }
                 }
-            } else {
-                // Just push the new times into the array
-                for (i=0; i<val.splits.length; i++) {
-                    splitTimes[i].push(val.splits[i]);
-                }
+                // Either way, push the finish time in
+                finishTimes.push(val.finish);
             }
-            // Either way, push the finish time in
-            finishTimes.push(val.finish);
         });
 
         // And once the arrays are created, we can sort them

@@ -140,7 +140,7 @@ var duration = {
     },
 
     isZero: function (dur) {
-        return dur === "0:00:00" || dur === "00:00:00";
+        return duration.convertToSeconds(dur) === 0;
     }
 }
 
