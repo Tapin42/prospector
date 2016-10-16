@@ -1,6 +1,7 @@
 var STATS = [
     STAT_elapsedTimes,
-    STAT_passers
+    STAT_passers,
+    STAT_percentageVsBest
 ];
 
 
@@ -264,7 +265,12 @@ function computeStats(settings, filteredData) {
 
     var promise = STATS[0].compute(settings, filteredData);
     for (var i=1; i < STATS.length; i++) {
-        promise = promise.then(STATS[i].compute);
+        if (STATS[i].compute) {
+            promise = promise.then(STATS[i].compute);
+        } else {
+            console.log('Stats package at index ' + i  + ' appears to be incomplete.  Discarding it.');
+            STATS.splice(i, 1);
+        }
     }
     promise.then(function (settings, data) {
         D.resolve(data);

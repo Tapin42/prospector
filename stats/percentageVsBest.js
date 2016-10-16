@@ -6,6 +6,8 @@ var STAT_percentageVsBest = {
     // 
     // The results of this compute function will include:
     // 
+    // - best: Time (string) of the person responsible for the single best time for the split
+    // - bestN: Time (string) of the computed marker time
     // - percentVsBest: Percentage of the person responsible for the single best time for the split
     // - percentVsBestN: Percentage of the (configurable) computed marker time
     // 
@@ -17,14 +19,16 @@ var STAT_percentageVsBest = {
     // {
     //      percentVsBest: {
     //          finish: {
+    //              best: ...,
+    //              bestN: ...,
     //              percentVsBest: ...,
     //              percentVsBestN: ...
     //          },
-    //          splits: [{ percentVsBest: ..., percentVsBestN: ... }, 
-    //                   { percentVsBest: ..., percentVsBestN: ... },
-    //                   { percentVsBest: ..., percentVsBestN: ... },
-    //                   { percentVsBest: ..., percentVsBestN: ... },
-    //                   { percentVsBest: ..., percentVsBestN: ... }]
+    //          splits: [{ best: ..., bestN: ..., percentVsBest: ..., percentVsBestN: ... }, 
+    //                   { best: ..., bestN: ..., percentVsBest: ..., percentVsBestN: ... }, 
+    //                   { best: ..., bestN: ..., percentVsBest: ..., percentVsBestN: ... }, 
+    //                   { best: ..., bestN: ..., percentVsBest: ..., percentVsBestN: ... }, 
+    //                   { best: ..., bestN: ..., percentVsBest: ..., percentVsBestN: ... }]
     //      }
     // }
     // 
@@ -51,8 +55,8 @@ var STAT_percentageVsBest = {
         })();
 
         // Next, let's create ordered arrays of the times.
-        var splitTimes = [],
-        var finishTimes = [],
+        var splitTimes = [];
+        var finishTimes = [];
         $.each(data.entrants, function (idx, val) {
             if (idx === 0) {
                 // Create the multidimensional array in splitTimes
@@ -83,7 +87,7 @@ var STAT_percentageVsBest = {
         }
 
         // Average the top-N values and assign them
-        var averageFinishTime;
+        var averageFinishTime = 0;
         var averageSplitTime = [];
         var pctFinishers = settings.avgTopPctFinishers || STAT_percentageVsBest.AVERAGE_TOP_PCT_FINISHERS;
         var minFinishers = settings.minTopFinishers || STAT_percentageVsBest.MIN_TOP_FINISHERS;
@@ -111,9 +115,9 @@ var STAT_percentageVsBest = {
             }
         }
         // ...and average them
-        averageFinishTime = Math.floor(averageFinishTime/numFinishers);
+        averageFinishTime = duration.convertToString(Math.floor(averageFinishTime/numFinishers));
         for (var i=0; i<averageSplitTime.length; i++) {
-            averageSplitTime[i] = Math.floor(averageSplitTime[i]/numFinishers);
+            averageSplitTime[i] = duration.convertToString(Math.floor(averageSplitTime[i]/numFinishers));
         }
 
         // A quick note: We're going to compute percentages to the nearest tenth of a percent, so we use (n*1000)/10 to truncate
@@ -124,6 +128,9 @@ var STAT_percentageVsBest = {
         // And finally fill out the data block
         var rv = {
             finish: {
+                best: sortedFinishTimes[0],
+                bestN: averageFinishTime,
+                entrant: bibStats.finish,
                 percentVsBest: determinePercent(bibStats.finish, sortedFinishTimes[0]),
                 percentVsBestN: determinePercent(bibStats.finish, averageFinishTime)
             },
@@ -131,10 +138,13 @@ var STAT_percentageVsBest = {
         };
         for (var i=0; i<splitTimes.length; i++) {
             // NB: We're creating the array of times here, and pushing on an object that contains the two keys that we want
-            rv.splits.push([{
+            rv.splits.push({
+                best: sortedSplitTimes[i][0],
+                bestN: averageSplitTime[i],
+                entrant: bibStats.splits[i],
                 percentVsBest: determinePercent(bibStats.splits[i], sortedSplitTimes[i][0]),
                 percentVsBestN: determinePercent(bibStats.splits[i], averageSplitTime[i])
-            }]);
+            });
         }
 
         data.percentVsBest = rv;
@@ -146,7 +156,49 @@ var STAT_percentageVsBest = {
     // Display the table of percentages
     render: function (data) {
         var D = $.Deferred();
-        console.log('ERROR: Unimplemented');
+
+        // Use c3js to generate a reasonable-looking chart 
+        $('#results').append('<hr/>').append('<div id="chart"></div>');
+
+        var chartData = [
+            ['Fastest'],
+            ['Top ' + Math.floor(100*STAT_percentageVsBest.AVERAGE_TOP_PCT_FINISHERS) + '%'],
+            ['Entrant']
+        ];
+
+        for (var i=0; i<data.percentVsBest.splits.length; i++) {
+            var split = data.percentVsBest.splits[i];
+            chartData[0].push(duration.convertToSeconds(split.best));
+            chartData[1].push(duration.convertToSeconds(split.bestN));
+            chartData[2].push(duration.convertToSeconds(split.entrant));
+        }
+
+        var chart = c3.generate({
+            bindto: '#chart',
+            data: {
+                columns: chartData,
+                type: 'bar',
+            },
+            axis: { 
+                rotated: true,
+                x: {
+                    type: 'category',
+                    categories: data.labels
+                },
+                y: {
+                    tick: {
+                        format: function (d) {
+                            return duration.convertToString(d);
+                        }
+                    }
+                }
+            },
+        });
+
+        // Followed by table:
+        // Y axis: Split
+        // X axis: Best Time, Avg of Best N Times, entrant's time (with percentages as well)
+
         D.resolve(data);
         return D.promise();
     }

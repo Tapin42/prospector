@@ -131,7 +131,7 @@ var STAT_passers = {
                         </thead> \
                         <tbody id="passersBody"></tbody> \
                     </table> \
-                </div>';
+                </div';
         $('#results').append(template);
 
         for (var i=0; i<data.passers.length; i++) {
@@ -145,9 +145,8 @@ var STAT_passers = {
                     </tr>';
             $('#passersBody').append(splitRow);
         }
-                            
 
-        D.resolve();
+        D.resolve(data);
         return D.promise();
     }
 };
